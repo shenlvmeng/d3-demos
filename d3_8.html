@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<title>D3_8-其他(堆栈图/矩阵树图/颜色)</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="d3.v3.min.js" charset="utf-8"></script>
+	<style type="text/css">
+		.axis path, .axis line{
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+
+		.axis text{
+			font-family: Consolas;
+			font-size: 11px;
+		}
+		.nodeRect{
+			stroke: #fff;
+			stroke-width: 1px;
+		}
+		.nodeText{
+			fill: #fff;
+			font-family: Calibri;
+		}
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+	//part 1 stack layout
+		var svg = d3.select('body').append('svg')
+			.attr({
+				'width': 650, 'height': 600
+			});
+		var dataset = [
+			{
+				'name': 'system',
+				'consume': [{ 'day': 20, 'memory': 3400 },
+				{ 'day': 22, 'memory': 2000 },
+				{ 'day': 24, 'memory': 2200 },
+				{ 'day': 26, 'memory': 3100 } ]
+			},
+			{
+				'name': 'user',
+				'consume': [{ 'day': 20, 'memory': 1100 },
+				{ 'day': 22, 'memory': 4000 },
+				{ 'day': 24, 'memory': 3800 },
+				{ 'day': 26, 'memory': 900 } ]
+			},
+			{
+				'name': 'remain',
+				'consume': [{ 'day': 20, 'memory': 800 },
+				{ 'day': 22, 'memory': 200 },
+				{ 'day': 24, 'memory': 900 },
+				{ 'day': 26, 'memory': 1200 } ]
+			}
+		];
+		var stack= d3.layout.stack()
+			.values(function (d) {
+				return d.consume;
+			})
+			.x(function(d){
+				return d.day;
+			})
+			.y(function(d){
+				return d.memory;
+			});
+		var data = stack(dataset);
+		console.log(data);
+
+		var xScale = d3.scale.ordinal()
+			.domain([20,22,24,26])
+			.rangeBands([0, 500], 0.3);
+		var maxMem = d3.max(data[2].consume, function(d){
+			return d.y0 + d.y;
+		});
+		var yScale = d3.scale.linear()
+			.domain([0, maxMem])
+			.range([540, 0]);
+		var color = d3.scale.category10();
+
+		var groups = svg.selectAll('g')
+			.data(data)
+			.enter()
+			.append('g')
+			.attr('fill', function(d, i){  //fill rects and circles
+				return color(i*2);
+			});
+
+		var rects = groups.selectAll('rect')
+			.data(function(d){
+				return d.consume;
+			})
+			.enter()
+			.append('rect')
+			.attr({
+				'x': function(d) { return xScale(d.day); },
+				'y': function(d) { return yScale(d.y0+d.y); },
+				'width': function(d) { return xScale.rangeBand(); },
+				'height': function(d) { return 540 - yScale(d.y); },
+				'transform': 'translate(50,30)'
+			});
+
+		var xAxis = d3.svg.axis().orient('bottom').scale(xScale);
+		var yAxis = d3.svg.axis().orient('left').scale(yScale);
+		svg.append('g')
+			.attr({
+				'class': 'axis',
+				'transform': 'translate(50, 570)'
+			})
+			.call(xAxis);
+		svg.append('g')
+			.attr({
+				'class': 'axis',
+				'transform': 'translate(50, 30)'
+			})
+			.call(yAxis);
+
+		//legendary
+		groups.append('circle')
+			.attr({
+				'cx': 540,
+				'cy': function(d, i){ return 40 + i*30; },
+				'r': 10
+			})
+		groups.append('text')
+			.attr({
+				'x': 560,
+				'y': function(d, i){ return 45 + i*30; },
+			})
+			.text(function(d) { return d.name; });
+
+		//part treemap layout
+		var svg2 = d3.select('body')
+			.append('svg')
+			.attr({
+				'width': 1800, 'height': 1000
+			});
+		var treemap = d3.layout.treemap()
+			.size([1750, 950])
+			.value(function(d){ return d.usage; });
+
+		d3.json('champions.json', function(err, res){
+			if(err){
+				console.error(err);
+				return false;
+			}
+			var nodes = treemap.nodes(res);
+			var links = treemap.links(nodes);
+			var color2 = d3.scale.category20();
+
+			console.log(nodes);
+			//console.log(links);  we don't use links.
+			var groups = svg2.selectAll('g')
+				.data(nodes.filter(function(d){ return !d.children; }))
+				.enter()
+				.append('g');
+
+			groups.append('rect')
+				.attr({
+					'class': 'nodeRect',
+					'x': function(d) { return d.x; },
+					'y': function(d) { return d.y; },
+					'width': function(d) { return d.dx; },
+					'height': function(d) { return d.dy; },
+					'fill': function(d){
+						return color2(d.parent.name);
+					}
+				});
+			groups.append('text')
+				.attr({
+					'class': 'nodeText',
+					'x': function(d) { return d.x; },
+					'y': function(d) { return d.y; },
+					'dx': '.5em',
+					'dy': '1.5em'
+				})
+				.text(function(d){
+					return d.name + " " + d.usage;
+				});
+		});
+
+		//part 3 color
+		var color1 = d3.rgb(40, 80, 100);
+		var color2 = d3.rgb("steelblue");
+		var color3 = d3.rgb('rgb(50,60,10)');
+
+		var hsl = d3.hsl(100, .8, .5);
+
+		var interpolate = d3.interpolate(d3.rgb("red"), d3.rgb("blue"));
+		console.log(interpolate(.5));
+	</script>
+</body>
+</html>

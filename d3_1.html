@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<title>D3_1-坐标轴与柱状图</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<style type="text/css">
+		.axis path, .axis line{
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+
+		.axis text{
+			font-family: Consolas;
+			font-size: 11px;
+		}
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		var width = 300;
+		var height = 300;
+
+		var svg = d3.select('body').append('svg').attr('width', width)
+					.attr('height', height);
+
+		var dataset = [ 250 , 210 , 170 , 130 , 90 ];
+		var rectHeight = 25;   //每个矩形所占的像素高度(包括空白)
+
+		svg.selectAll("rect")
+			.data(dataset)
+			.enter()
+			.append("rect")
+			.attr("x",20)
+			.attr("y",function(d,i){
+				return i * rectHeight;
+			})
+			.attr("width",function(d){
+				return d;
+			})
+			.attr("height",rectHeight-2)
+			.attr("fill","steelblue");
+
+		var svg2 = d3.select('body').append('svg').attr('width', width).attr('height', height);
+
+		var dataset2 = [2.1, 1.7, 2.5, 1.3, 0.9];
+
+		var linear = d3.scale.linear()
+					.domain([0, d3.max(dataset2)])
+					.range([0,250]);
+		svg2.selectAll('rect').data(dataset2).enter().append('rect').attr('x', 20).attr('y', function(d, i){
+			return i * rectHeight;
+		}).attr('width', function(d){
+			return linear(d);
+		}).attr('height', rectHeight-2).attr('fill', 'steelblue');
+
+		var axis = d3.svg.axis().scale(linear).orient('bottom').ticks(7).tickValues([0,.5,1,1.5,2,2.5]);
+
+		svg2.append('g').attr('class', 'axis').attr('transform', 'translate(20,150)').call(axis);
+	</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<title>D3_5-布局1(饼图/力图/弦图/层级图/打包图)</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+</head>
+<body>
+	<script type="text/javascript">
+		//part 1 pie chart
+		var dataset = [30, 20, 45, 90, 13];
+		var pie = d3.layout.pie();
+		var piedata = pie(dataset);
+		console.log(piedata);
+
+		var svg = d3.select('body').append('svg')
+			.attr({
+				'width': 400, 'height': 400
+			});
+		var arc = d3.svg.arc().innerRadius(30).outerRadius(100);
+		var arcs = svg.selectAll('g')
+			.data(piedata).enter().append('g')
+			.attr('transform','translate(200,200)');
+		var color = d3.scale.category20();
+
+		arcs.append('path')
+			.attr({
+				'fill': function(d,i){
+					return color(i);
+				}, 
+				'd': function(d){
+					return arc(d);
+				}
+			});
+		arcs.append('text')
+			.attr({
+				'transform': function(d){
+					return 'translate(' + arc.centroid(d) + ")";
+				},
+				'text-anchor': 'middle'
+			})
+			.style('font-family', 'Calibri')
+			.text(function(d){
+				return d.data;
+			});
+
+		//part 2 force layout
+		var nodes = d3.range(1,8).map(function(i){
+			return {name : "S" + i};
+		});
+		var links = [{source: 0, target: 1}, {source: 0, target: 2},
+			{source: 1, target: 3}, {source: 1, target: 4},
+			{source: 2, target: 5}, {source: 2, target: 6}];
+
+		var force = d3.layout.force()
+			.nodes(nodes)
+			.links(links)
+			.size([400,400])
+			.linkDistance(100)
+			.charge([-400]);
+		force.start();
+		console.log(nodes);
+		console.log(links);
+
+		var svg2 = d3.select('body').append('svg')
+			.attr({
+				'width': 400, 'height': 400
+			});
+		var svg_links = svg2.selectAll('line')
+			.data(links)
+			.enter()
+			.append('line')
+			.attr({
+				'stroke': '#ccc', 'stroke-width': 2
+			});
+		var svg_nodes = svg2.selectAll('circle')
+			.data(nodes)
+			.enter()
+			.append('circle')
+			.attr({
+				'r': 15, 'fill': function(d, i){
+					return color(i*2);
+				}
+			})
+			.call(force.drag);
+		var svg_texts = svg2.selectAll('text')
+			.data(nodes)
+			.enter()
+			.append('text')
+			.attr({
+				'dx': 17, 'dy': 8, 'fill': '#000'
+			})
+			.style('font-family', 'Calibri')
+			.text(function(d){
+				return d.name;
+			});
+
+		force.on('tick', function(){
+			svg_links.attr("x1", function(d) { return d.source.x; })
+				.attr("y1", function(d) { return d.source.y; })
+				.attr("x2", function(d) { return d.target.x; })
+				.attr("y2", function(d) { return d.target.y; });
+			svg_nodes.attr({
+				'cx': function(d) {return d.x;},
+				'cy': function(d) {return d.y;}
+			});
+			svg_texts.attr({
+				'x': function(d) {return d.x;},
+				'y': function(d) {return d.y;}
+			});
+		});
+
+		//part 3 chord
+		var city_name = ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Hongkong'];
+		var population = [
+			[1000, 7838, 9120, 6472, 1181],
+			[5416, 3105, 2041, 7452, 1236],
+			[8126, 6411, 8124, 3147, 5422],
+			[4412, 2368, 1258, 3978, 8841],
+			[5645, 2563, 8421, 6942, 5102]
+		];
+
+		var chord_layout = d3.layout.chord()
+			.padding(0.03)
+			.sortGroups(d3.descending)
+			.sortSubgroups(d3.descending)
+			.matrix(population);
+		var groups = chord_layout.groups();
+		var chords = chord_layout.chords();
+		console.log(groups);
+		console.log(chords);
+
+		var svg3 = d3.select('body').append('svg')
+			.attr({
+				'width': 600, 'height': 600
+			})
+			.append('g')
+			.attr('transform', 'translate(300,300)');
+		var outer_arc = d3.svg.arc()
+			.innerRadius(190)
+			.outerRadius(210);
+
+		//outer groups using arc shape
+		var outer = svg3.append('g');
+		outer.selectAll('path')
+			.data(groups)
+			.enter()
+			.append('path')
+			.attr({
+				'fill': function(d){ return color(d.index);},
+				'stroke': function(d){ return color(d.index);},
+				'd': outer_arc
+			});
+		outer.selectAll('text')
+			.data(groups)
+			.enter()
+			.append('text')
+			.each(function(d, i){
+				d.angle = (d.startAngle + d.endAngle) / 2;
+				d.name = city_name[i];
+			})
+			.attr({
+				'dy': '.5em',
+				'transform': function(d){
+					return "rotate(" +  ( d.angle  * 180 / Math.PI) + ")" + "translate(0,-225)";
+				},
+				'text-anchor': 'middle'
+			})
+			.style('font-family', 'Calibri')
+			.text(function(d){
+				return d.name;
+			})
+
+		//inner chords using chord shape
+		var inner = d3.svg.chord().radius(190);
+		svg3.append('g').selectAll('path')
+			.data(chords)
+			.enter()
+			.append('path')
+			.attr({
+				'fill': function(d){ return color(d.source.index); },
+				'stroke': '#fff',
+				'd': inner
+			})
+			.style('opacity', .7)
+			.on('mouseover', function(){
+				d3.select(this).attr('fill', 'yellow');
+			})
+			.on('mouseout', function(d,i){
+				d3.select(this).transition()
+					.duration(1500)
+					.attr('fill', color(d.source.index));
+			});
+
+		//part 4 cluster
+		var svg4 = d3.select('body').append('svg')
+			.attr({
+				'width': 580, 'height': 500
+			});
+
+		//import json to cluster layout
+		var cluster = d3.layout.cluster().size([500, 400]);
+		d3.json('./students.json', function(err, res){
+			if(err) return false;
+			var nodes = cluster.nodes(res);
+			var links = cluster.links(nodes);
+
+			console.log(nodes);
+			console.log(links);
+
+			var diagonal = d3.svg.diagonal()
+				.projection(function(d){
+					return [d.y, d.x];
+				});
+
+			var link = svg4.append('g').selectAll('path')
+				.data(links)
+				.enter()
+				.append('path')
+				.attr({
+					'd': diagonal,
+					'fill-opacity': 0,
+					'stroke': '#555',
+					'stroke-width': 1
+				})
+				.style('opacity', '0.8');
+			var node = svg4.append('g').selectAll('circle')
+				.data(nodes)
+				.enter()
+				.append('circle')
+				.attr({
+					'fill': '#fff',
+					'stroke': color(3),
+					'stroke-width': 2,
+					'r': 5,
+					'cx': function(d){ return d.y; },
+					'cy': function(d){ return d.x; }
+				});
+			var text = svg4.append('g').selectAll('text')
+				.data(nodes)
+				.enter()
+				.append('text')
+				.attr({
+					'x': function(d){return d.y},
+					'y': function(d){return d.x},
+					'text-anchor': function(d){
+						if(d.children) return 'end';
+						return 'start';
+					},
+					'dx': function(d){
+						if(d.children) return '-.5em';
+						return '.5em';
+					},
+					'dy': '.3em'
+				})
+				.text(function(d){
+					return d.name;
+				})
+				.style('font-family', 'Calibri');
+			svg4.selectAll('g').attr('transform', 'translate(50,0)')
+		});
+
+		//part 5 pack
+		var svg5 = d3.select('body').append('svg')
+			.attr({
+				'width': 550, 'height': 550
+			})
+		var pack = d3.layout.pack().size([500,500])
+			.radius(20).padding(10);
+
+		d3.json('students.json', function(err, res){
+			var nodes = pack(res);
+			console.log(nodes);
+
+			svg5.selectAll('circle')
+				.data(nodes)
+				.enter()
+				.append('circle')
+				.attr({
+					'fill': function(d) { return color(d.depth); },
+					'cx': function(d) { return d.x; },
+					'cy': function(d) { return d.y; },
+					'r': function(d) { return d.r;},
+					'opacity': 1
+				});
+
+			svg5.selectAll('text')
+				.data(nodes)
+				.enter()
+				.append('text')
+				.attr({
+					'x': function(d) { return d.x; },
+					'y': function(d) { return d.y; },
+					'text-anchor': 'middle',
+					'stroke': '#fff'
+				})
+				.text(function(d){
+					if(!d.children) return d.name;
+				});
+		});
+	</script>
+</body>
+</html>

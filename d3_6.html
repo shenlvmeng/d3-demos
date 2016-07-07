@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<title>D3_6-布局1(地图/分区图)</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+</head>
+<body>
+	<script type="text/javascript">
+		//part 1 & 2 geographic graph
+		var svg = d3.select('body').append('svg')
+			.attr({
+				'width': 1200, 'height': 1000
+			});
+		var svg2 = d3.select('body').append('svg')
+			.attr({
+				'width': 1200, 'height': 1000
+			});
+
+		var projection = d3.geo.mercator()
+			.center([107, 31])
+			.scale(700)
+			.translate([600,500]);
+		var path = d3.geo.path()
+			.projection(projection);
+		var force = d3.layout.force().size([1200,1000]);
+
+		var color = d3.scale.category20b();
+
+		function edge(a, b){
+			var dx = a[0] - b[0],
+				dy = a[1] - b[1];
+				return {
+					source: a,
+					target: b,
+					distance: Math.sqrt(dx*dx + dy*dy)
+				};
+		};
+
+		d3.json("china.json", function(err, res){
+			if(err) return console.error(error);
+			console.log(res.features);
+			var nodes = [];
+			var links = [];
+
+			svg.selectAll('path')
+				.data(res.features)
+				.enter()
+				.append('path')
+				.attr({
+					'stroke': '#000',
+					'stroke-width': 1,
+					'fill': function(d,i){
+						return color(i);
+					},
+					'opacity': 0.7,
+					'd': path
+				})
+				.on('mouseover', function(){
+					d3.select(this).attr('opacity', 1);
+				})
+				.on('mouseout', function(){
+					d3.select(this).attr('opacity', 0.7);
+				})
+				.on('click', function(d){
+					alert(d.properties.name);
+				});
+
+			res.features.forEach(function(d){
+				var centroid = path.centroid(d);
+				centroid.x = centroid[0];
+				centroid.y = centroid[1];
+				centroid.feature = d;
+				nodes.push(centroid);
+			});
+
+			var triangles = d3.geom.voronoi().triangles(nodes);
+			triangles.forEach(function(d,i){
+				links.push(edge(d[0], d[1]));
+				links.push(edge(d[1], d[2]));
+				links.push(edge(d[0], d[2]));
+			});
+
+			force.gravity(0)
+				.charge(0)
+				.nodes(nodes)
+				.links(links)
+				.linkDistance(function(d){
+					return d.distance;
+				})
+				.start();
+
+			var node = svg2.selectAll('g')
+				.data(nodes)
+				.enter()
+				.append('g')
+				.attr('transform', function(d){
+					return "translate("+ -d.x + "," + -d.y + ")";
+				})
+				.call(force.drag)
+				.append('path')
+				.attr('transform', function(d){
+					return "translate("+ -d.x + "," + -d.y + ")";
+				})
+				.attr({
+					'stroke': '#000',
+					'stroke-width': 1,
+					'fill': function(d, i){
+						return color(i);
+					},
+					'd': function(d){
+						return path(d.feature);
+					}
+				});
+			var link = svg2.selectAll('line')
+				.data(links)
+				.enter()
+				.append('line')
+				.attr({
+					'x1': function(d) { return d.source.x; },
+					'x2': function(d) { return d.target.x; },
+					'y1': function(d) { return d.source.y; },
+					'y2': function(d) { return d.target.y; },
+					'stroke': "#555",
+					'stroke-width': 1,
+					'stroke-opacity': 0.7
+				});
+			force.on('tick', function(d,i){
+				link.attr({
+					'x1': function(d) { return d.source.x; },
+					'x2': function(d) { return d.target.x; },
+					'y1': function(d) { return d.source.y; },
+					'y2': function(d) { return d.target.y; }
+				});
+				node.attr('transform', function(d){
+					return "translate(" + d.x + "," + d.y + ")";
+				});
+			});
+		});
+
+		//part 3 & 4 partition graph
+		var svg3 = d3.select('body')
+			.append('svg')
+			.attr({
+				'width': 700, 'height': 700
+			});
+		var svg4 = d3.select('body')
+			.append('svg')
+			.attr({
+				'width': 700, 'height': 700
+			});
+
+		var partition = d3.layout.partition()
+			.size([700,700])
+			.value(function(){return 1;});
+		var partition_r = d3.layout.partition()
+			.size([2*Math.PI, 300*300])
+			.value(function(d){ return d.name.length; });
+
+		var arc = d3.svg.arc()
+			.startAngle(function(d){ return d.x; })
+			.endAngle(function(d){ return d.x + d.dx; })
+			.innerRadius(function(d){ return Math.sqrt(d.y); })
+			.outerRadius(function(d){ return Math.sqrt(d.y + d.dy); });
+
+		d3.json('students.json', function(err, res){
+			if(err) console.error(err);
+			console.log(res);
+
+			var nodes = partition.nodes(res);
+			var links = partition.links(nodes);
+
+			console.log(nodes);
+
+			var rects = svg3.selectAll('g')
+				.data(nodes)
+				.enter()
+				.append('g');
+			//draw rectangles
+			rects.append('rect')
+				.attr({
+					'x': function(d){ return d.y; },
+					'y': function(d){ return d.x; },
+					'width': function(d){ return d.dy; }, //dx refers to the width of rect
+					'height': function(d){ return d.dx; },// dy refers to the height of rect
+					'stroke': "#fff",
+					'fill': function(d){
+						return color((d.children ? d : d.parent).name);
+					},
+					'opacity': .7
+				})
+				.on('mouseover', function(){
+					d3.select(this).attr('opacity', 1);
+				})
+				.on('mouseout', function(){
+					d3.select(this)
+						.transition()
+						.duration(300)
+						.attr('opacity', .7);
+				});
+
+			rects.append('text')
+				.attr('transform', function(d){
+					return "translate(" + (d.y+20) + "," + (d.x+20) + ")";
+				})
+				.style({
+					'font-family': 'Calibri',
+					'font-size': function(d){
+						return 21 - 2 * d.depth + 'px';
+					}
+				})
+				.text(function(d){
+					return d.name;
+				})
+
+			//part 4 ring partition
+			var arcs = svg4.selectAll('g')
+				.data(nodes)
+				.enter()
+				.append('g')
+				.attr('transform', 'translate(350,350)');
+
+			nodes = partition_r.nodes(res);
+			links = partition_r.links(nodes);
+
+			arcs.append('path')
+				.attr({
+					'display': function(d){
+						return d.depth ? null : 'none';
+					},
+					'd': arc,
+					'stroke': '#fff',
+					'fill': function(d){
+						return color((d.children ? d : d.parent).name);
+					},
+					'opacity': .7
+				})
+				.on('mouseover', function(){
+					d3.select(this).attr('opacity', 1);
+				})
+				.on('mouseout', function(){
+					d3.select(this)
+						.transition()
+						.duration(300)
+						.attr('opacity', .7);
+				})
+			arcs.append('text')
+				.attr({
+					'text-anchor': 'middle',
+					'transform': function(d, i){
+						if(i == 0) return 'translate(' + arc.centroid(d) + ')';
+						var r = 180/Math.PI * (d.x + d.dx/2);
+						if((d.x + d.dx) >= Math.PI * 3/4 && (d.x + d.dx) <= Math.PI * 7/4)
+							r += 180;
+						return "translate("+ arc.centroid(d) + ")" + "rotate(" + r + ")";
+					}
+				})
+				.style({
+					'font-family': 'Calibri',
+					'font-size': function(d, i){
+						if(i == 0) return '20px';
+						else return 16 - 2 * d.depth + 'px';
+					}
+				})
+				.text(function(d){
+					return d.name;
+				});
+		});
+	</script>
+</body>
+</html>

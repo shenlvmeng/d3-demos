@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<title>D3_3-渐变效果</title>
+	<meta charset="utf-8">
+	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<style type="text/css">
+		.axis path, .axis line{
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+
+		.axis text{
+			font-family: Consolas;
+			font-size: 11px;
+		}
+		.text{
+			font-family: Calibri;
+			fill: #fff;
+		}
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		var svg2 = d3.select('body').append('svg')
+			.attr('width', 400).attr('height', 400);
+
+		var circle1 = svg2.append('circle').attr({
+			'cx' : 100, 'cy' : 100, 'r': 45, 'fill': 'green'
+		}).transition().duration(1000)
+		.attr('cx', 300);
+
+		var circle2 = svg2.append('circle').attr({
+			'cx': 100, 'cy': 200, 'r': 45, 'fill': 'green'
+		}).transition().duration(1500)
+		.attr({
+			'cx': 300, 'fill': 'red'
+		});
+
+		var circle3 = svg2.append('circle').attr({
+			'cx': 100, 'cy': 300, 'r': 45, 'fill': 'green'
+		}).transition().duration(2000).ease('bounce')
+		.attr({
+			'cx': 300, 'fill': 'red', 'r': 25
+		});
+
+		var width  = 400,
+			height = 400,
+			paddings = {left:30, right:30, top:20, bottom:20};
+		var svg = d3.select('body').append('svg')
+			.attr('width', width).attr('height', height);
+
+		var dataset = [10, 20, 30, 40, 33, 24, 12, 5];
+		var xScale = d3.scale.ordinal().domain(d3.range(dataset.length)).rangeRoundBands([0, width - paddings.left - paddings.right]);
+		var yScale = d3.scale.linear().domain([0,d3.max(dataset)])
+			.range([height - paddings.top - paddings.bottom, 0]);
+
+		var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+		var yAxis = d3.svg.axis().scale(yScale).orient('left');
+
+		var rects = svg.selectAll('rect').data(dataset).enter()
+			.append('rect').attr('transform', 'translate('+paddings.left + "," + paddings.top + ")")
+			.attr('x', function(d,i) {
+				return xScale(i) + 2;
+			})
+			.attr({
+				'y': yScale(0), 'height': 0
+			})
+			.transition()
+			.delay(function(d, i){
+				return i*200;
+			})
+			.duration(500)
+			.ease('linear')
+			.attr('y', function(d){
+				//map datum to y axis
+				return yScale(d);
+			})
+			.attr('width', xScale.rangeBand() - 4)
+			.attr('height', function(d){
+				return height - paddings.top - paddings.bottom - yScale(d);
+			})
+			.attr('fill', 'steelblue');
+		var texts = svg.selectAll('text').data(dataset).enter()
+			.append('text')
+			.attr('transform', 'translate('+ paddings.left + ',' + paddings.top + ')')
+			.attr('x', function(d,i){
+				return xScale(i) + 2;
+			})
+			.attr('y', function(){
+				return yScale(0);
+			})
+			.transition()
+			.delay(function(d, i){
+				return i*200;
+			})
+			.duration(600)
+			.ease('linear')
+			.attr('y', function(d){
+				return yScale(d);
+			})
+			.attr('dx', 12)
+			.attr('dy', 20)
+			.text(function(d){
+				return d;
+			})
+			.attr('class','text');
+
+		svg.append('g').attr('class','axis')
+			.attr('transform', 'translate(30, 380)')
+			.call(xAxis);
+
+		svg.append('g').attr('class','axis')
+			.attr('transform', 'translate(30, 20)')
+			.call(yAxis);
+	</script>
+</body>
+</html>

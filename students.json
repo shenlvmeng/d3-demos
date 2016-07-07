@@ -1,0 +1,50 @@
+{
+	"name": "FNL",
+	"children":
+	[
+		{
+			"name": "SDN",
+			"children": [
+				{"name": "Xinyuanming"},
+				{"name": "Wulixuan"},
+				{"name": "Gengzhi"},
+				{"name": "Liuzengyi"},
+				{"name": "Caorui"},
+				{"name": "Jiangyun"},
+				{"name": "Maningning"}
+			]
+		},
+
+		{
+			"name": "CCN",
+			"children": [
+				{"name": "Lvxiaoyang"},
+				{"name": "Suyi"},
+				{"name": "Xuchao"},
+				{"name": "Xujingwei"},
+				{"name": "Wangfang"}
+			]
+		},
+
+		{
+			"name": "Big data",
+			"children": [
+				{"name": "Fudanyang"},
+				{"name": "Chenxu"},
+				{"name": "Wangqiyi"},
+				{"name": "Licong"},
+				{"name": "Chenyujie"},
+				{"name": "Madong"}
+			]
+		},
+
+		{
+			"name": "Others",
+			"children": [
+				{"name": "Huangchengyuan"},
+				{"name": "Xijie"},
+				{"name": "Liuyiqing"}
+			]
+		}
+	]
+}
